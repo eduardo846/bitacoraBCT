@@ -1,6 +1,10 @@
 [build]
+  command = "npm ci"
   publish = "public"
   functions = "netlify/functions"
+
+[functions]
+  included_files = ["node_modules/**"]
 
 [build.environment]
   NODE_VERSION = "22"
