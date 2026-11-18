@@ -1,8 +1,8 @@
 import records from "../../lib/records.js";
-import { jsonResponse, methodNotAllowed, requireIdentity } from "../../lib/netlify-functions.mjs";
+import { jsonResponse, methodNotAllowed, requireFirebaseAuth } from "../../lib/api-http.mjs";
 
 export default async function handler(request) {
-  return requireIdentity(async () => {
+  return requireFirebaseAuth(request, async () => {
     if (request.method !== "GET") return methodNotAllowed("GET");
     const month = new URL(request.url).searchParams.get("mes") || "";
     const workbook = await records.exportMonthlyWorkbook(month);

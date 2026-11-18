@@ -7,7 +7,8 @@
     <meta name="description" content="Registra y consulta tus actividades y horas de trabajo.">
     <title>Bitácora de actividades y horas</title>
     <link rel="stylesheet" href="/styles.css">
-    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/13.4.0/firebase-app-compat.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/13.4.0/firebase-auth-compat.js" defer></script>
     <script src="/app.js" defer></script>
   </head>
   <body>
@@ -15,19 +16,29 @@
       <a class="brand" href="/" aria-label="Bitácora, inicio"><span class="brand-icon" aria-hidden="true">B</span><span>BITÁCORA<small>CONTROL DE ACTIVIDADES</small></span></a>
       <div class="topbar-right">
         <span class="today" id="today-label"></span>
-        <span class="identity-email" id="identity-email" hidden></span>
-        <button class="button button-light" id="login-button" type="button" hidden>Iniciar sesión</button>
+        <span class="account-email" id="user-email" hidden></span>
         <button class="button button-light" id="logout-button" type="button" hidden>Cerrar sesión</button>
-        <button class="button button-primary" id="new-entry" type="button"><span aria-hidden="true">＋</span> Registrar actividad</button>
+        <button class="button button-primary" id="new-entry" type="button" hidden><span aria-hidden="true">＋</span> Registrar actividad</button>
       </div>
     </header>
 
     <section class="auth-panel" id="auth-panel" aria-live="polite" hidden>
       <div class="auth-card">
-        <p class="eyebrow"><span class="eyebrow-dot"></span> ACCESO PROTEGIDO</p>
+        <p class="eyebrow"><span class="eyebrow-dot"></span> FIREBASE AUTHENTICATION</p>
         <h1>Bitácora de actividades</h1>
-        <p id="auth-message">Inicia sesión con la cuenta que te invitó el administrador para consultar y administrar los registros.</p>
-        <button class="button button-primary" id="auth-login" type="button">Iniciar sesión</button>
+        <p>Inicia sesión con tu cuenta autorizada para consultar y administrar los registros.</p>
+        <form class="auth-form" id="auth-form">
+          <div class="field">
+            <label for="auth-email">Correo electrónico</label>
+            <input id="auth-email" name="email" type="email" autocomplete="username" required>
+          </div>
+          <div class="field">
+            <label for="auth-password">Contraseña</label>
+            <input id="auth-password" name="password" type="password" autocomplete="current-password" required>
+          </div>
+          <p class="form-message" id="auth-message" role="status" aria-live="polite"></p>
+          <button class="button button-primary" id="auth-submit" type="submit">Iniciar sesión</button>
+        </form>
       </div>
     </section>
 

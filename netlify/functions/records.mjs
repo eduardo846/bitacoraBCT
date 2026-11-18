@@ -1,8 +1,8 @@
 import records from "../../lib/records.js";
-import { jsonResponse, methodNotAllowed, readJson, requireIdentity } from "../../lib/netlify-functions.mjs";
+import { jsonResponse, methodNotAllowed, readJson, requireFirebaseAuth } from "../../lib/api-http.mjs";
 
 export default async function handler(request) {
-  return requireIdentity(async () => {
+  return requireFirebaseAuth(request, async () => {
     if (request.method === "GET") {
       return jsonResponse(200, await records.readEntries());
     }

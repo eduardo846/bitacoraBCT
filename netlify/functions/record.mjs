@@ -1,8 +1,8 @@
 import records from "../../lib/records.js";
-import { jsonResponse, methodNotAllowed, readJson, requireIdentity } from "../../lib/netlify-functions.mjs";
+import { jsonResponse, methodNotAllowed, readJson, requireFirebaseAuth } from "../../lib/api-http.mjs";
 
 export default async function handler(request, context) {
-  return requireIdentity(async () => {
+  return requireFirebaseAuth(request, async () => {
     const id = context.params.id;
     if (!/^[0-9a-f-]{36}$/i.test(id || "")) {
       return jsonResponse(404, { message: "No se encontró el recurso solicitado." });

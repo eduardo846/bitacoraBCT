@@ -12,15 +12,18 @@ const dialogTitle = document.querySelector("#dialog-title");
 const exportButton = document.querySelector("#export-month");
 const authPanel = document.querySelector("#auth-panel");
 const authMessage = document.querySelector("#auth-message");
+const authForm = document.querySelector("#auth-form");
+const authSubmit = document.querySelector("#auth-submit");
+const authEmail = document.querySelector("#auth-email");
+const authPassword = document.querySelector("#auth-password");
 const appContent = document.querySelector("#app-content");
-const loginButton = document.querySelector("#login-button");
 const logoutButton = document.querySelector("#logout-button");
-const identityEmail = document.querySelector("#identity-email");
-const localDevelopment = ["localhost", "127.0.0.1"].includes(window.location.hostname)
-  && !new URLSearchParams(window.location.search).has("identity");
+const newEntryButton = document.querySelector("#new-entry");
+const userEmail = document.querySelector("#user-email");
 let entries = [];
 let pendingDeleteId = null;
 let messageTimer;
+let firebaseAuth;
 
 const today = new Date();
 const localDate = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -41,13 +44,9 @@ function showPageMessage(message, isError = false) {
 
 async function request(path, options = {}) {
   const headers = new Headers(options.headers || {});
-  if (!localDevelopment) {
-    const identity = window.netlifyIdentity;
-    if (!identity || !identity.currentUser()) {
-      throw new Error("Inicia sesión para continuar.");
-    }
-    headers.set("Authorization", `Bearer ${await identity.refresh()}`);
-  }
+  const user = firebaseAuth && firebaseAuth.currentUser;
+  if (!user) throw new Error("Inicia sesión para continuar.");
+  headers.set("Authorization", `Bearer ${await user.getIdToken()}`);
   const response = await fetch(path, { ...options, headers });
   const result = await response.json();
   if (!response.ok) throw new Error(result.message || "No se pudo completar la solicitud.");
@@ -238,9 +237,9 @@ exportButton.addEventListener("click", async () => {
   exportButton.disabled = true;
   try {
     const headers = new Headers();
-    if (!localDevelopment) {
-      headers.set("Authorization", `Bearer ${await window.netlifyIdentity.refresh()}`);
-    }
+    const user = firebaseAuth && firebaseAuth.currentUser;
+    if (!user) throw new Error("Inicia sesión para continuar.");
+    headers.set("Authorization", `Bearer ${await user.getIdToken()}`);
     const response = await fetch(`/api/registros/exportar?mes=${encodeURIComponent(month)}`, { headers });
     if (!response.ok) {
       const error = await response.json();
@@ -328,33 +327,57 @@ function showLoadError(error) {
 }
 
 function showAuthenticatedApp(user) {
-  identityEmail.textContent = user.email || "";
-  identityEmail.hidden = !user.email;
-  loginButton.hidden = true;
+  userEmail.textContent = user.email || "";
+  userEmail.hidden = !user.email;
   logoutButton.hidden = false;
+  newEntryButton.hidden = false;
   authPanel.hidden = true;
   appContent.hidden = false;
   loadEntries().catch(showLoadError);
 }
 
 function showLogin(message) {
-  identityEmail.hidden = true;
+  userEmail.hidden = true;
   logoutButton.hidden = true;
-  loginButton.hidden = false;
+  newEntryButton.hidden = true;
   appContent.hidden = true;
   authPanel.hidden = false;
   authMessage.textContent = message;
+  authPassword.value = "";
   recordsBody.replaceChildren();
 }
 
-document.querySelector("#auth-login").addEventListener("click", () => {
-  if (window.netlifyIdentity) window.netlifyIdentity.open("login");
+authForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!firebaseAuth) return;
+  authSubmit.disabled = true;
+  authMessage.textContent = "";
+  try {
+    await firebaseAuth.signInWithEmailAndPassword(authEmail.value.trim(), authPassword.value);
+    authForm.reset();
+  } catch (error) {
+    const invalidCredentials = [
+      "auth/invalid-credential",
+      "auth/user-not-found",
+      "auth/wrong-password"
+    ].includes(error.code);
+    const messages = {
+      "auth/invalid-email": "Indica un correo electrónico válido.",
+      "auth/network-request-failed": "No se pudo conectar con Firebase. Revisa tu conexión.",
+      "auth/unauthorized-domain": "Este dominio no está autorizado en Firebase Authentication."
+    };
+    authMessage.textContent = invalidCredentials
+      ? "El correo o la contraseña no son correctos."
+      : messages[error.code] || error.message || "No se pudo iniciar sesión.";
+  } finally {
+    authSubmit.disabled = false;
+  }
 });
-loginButton.addEventListener("click", () => window.netlifyIdentity?.open("login"));
+
 logoutButton.addEventListener("click", async () => {
   logoutButton.disabled = true;
   try {
-    await window.netlifyIdentity.logout();
+    await firebaseAuth.signOut();
   } catch (error) {
     showPageMessage(error.message || "No se pudo cerrar la sesión.", true);
   } finally {
@@ -362,34 +385,34 @@ logoutButton.addEventListener("click", async () => {
   }
 });
 
-if (localDevelopment) {
-  appContent.hidden = false;
-  authPanel.hidden = true;
-  loginButton.hidden = true;
-  logoutButton.hidden = true;
-  loadEntries().catch(showLoadError);
-} else if (!window.netlifyIdentity) {
-  showLogin("No se pudo cargar el inicio de sesión. Verifica tu conexión y vuelve a cargar la página.");
-  loginButton.disabled = true;
-} else {
-  window.netlifyIdentity.setLocale("es");
-  window.netlifyIdentity.on("init", (user) => {
+async function initializeAuthentication() {
+  const response = await fetch("/api/auth-config", { cache: "no-store" });
+  let config;
+  try {
+    config = await response.json();
+  } catch {
+    throw new Error("No se pudo leer la configuración de autenticación.");
+  }
+  if (!response.ok) throw new Error(config.message || "No se pudo cargar la configuración de Firebase.");
+  if (!window.firebase || typeof window.firebase.auth !== "function") {
+    throw new Error("No se pudo cargar Firebase Authentication. Verifica tu conexión y vuelve a cargar la página.");
+  }
+  if (window.firebase.apps.length === 0) window.firebase.initializeApp(config);
+  firebaseAuth = window.firebase.auth();
+  firebaseAuth.onAuthStateChanged((user) => {
     if (!user) {
-      showLogin("Inicia sesión con la cuenta que te invitó el administrador para consultar y administrar los registros.");
+      entries = [];
+      showLogin("Inicia sesión con tu correo y contraseña de Firebase.");
       return;
     }
     showAuthenticatedApp(user);
+  }, (error) => {
+    showLogin(error.message || "No se pudo verificar la sesión.");
   });
-  window.netlifyIdentity.on("login", (user) => {
-    window.netlifyIdentity.close();
-    showAuthenticatedApp(user);
-  });
-  window.netlifyIdentity.on("logout", () => {
-    entries = [];
-    showLogin("La sesión se cerró. Inicia sesión para volver a acceder a la bitácora.");
-  });
-  window.netlifyIdentity.on("error", (error) => {
-    showLogin(error.message || "No se pudo completar la autenticación. Inténtalo de nuevo.");
-  });
-  window.netlifyIdentity.init();
 }
+
+initializeAuthentication().catch((error) => {
+  console.error("No se pudo iniciar Firebase Authentication:", error);
+  showLogin(error.message || "No se pudo iniciar la autenticación.");
+  authForm.hidden = true;
+});

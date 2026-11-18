@@ -93,9 +93,19 @@ async function handleRequest(request, response) {
   const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
   if (url.pathname.startsWith("/api/")) {
     try {
+      if (url.pathname === "/api/auth-config" && request.method === "GET") {
+        return sendJson(response, 200, records.getFirebaseClientConfig());
+      }
+
+      const authorization = request.headers.authorization || "";
+      const match = authorization.match(/^Bearer\s+(.+)$/i);
+      if (!match) {
+        return sendJson(response, 401, { message: "Inicia sesión para acceder a la bitácora." });
+      }
+      await records.verifyIdToken(match[1]);
       return await handleApi(request, response, url);
     } catch (error) {
-      console.error("Error en la API:", error);
+      if (!error.statusCode || error.statusCode >= 500) console.error("Error en la API:", error);
       return sendJson(response, error.statusCode || 500, {
         message: error.statusCode ? error.message : "Ocurrió un error al procesar la solicitud."
       });
