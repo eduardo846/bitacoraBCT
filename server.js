@@ -6,13 +6,16 @@ const path = require("node:path");
 const records = require("./lib/records");
 
 const ROOT = __dirname;
-const PUBLIC_DIR = path.join(ROOT, "public");
+const DIST_DIR = path.join(ROOT, "dist");
 const PORT = Number(process.env.PORT) || 3000;
 const MAX_BODY_BYTES = 64 * 1024;
 const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8"
+  ".ico": "image/x-icon",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml"
 };
 
 function sendJson(response, statusCode, body) {
@@ -93,10 +96,6 @@ async function handleRequest(request, response) {
   const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
   if (url.pathname.startsWith("/api/")) {
     try {
-      if (url.pathname === "/api/auth-config" && request.method === "GET") {
-        return sendJson(response, 200, records.getFirebaseClientConfig());
-      }
-
       const authorization = request.headers.authorization || "";
       const match = authorization.match(/^Bearer\s+(.+)$/i);
       if (!match) {
@@ -123,8 +122,8 @@ async function handleRequest(request, response) {
     response.writeHead(400);
     return response.end();
   }
-  const filePath = path.resolve(PUBLIC_DIR, `.${requestedPath}`);
-  if (!filePath.startsWith(`${PUBLIC_DIR}${path.sep}`)) {
+  const filePath = path.resolve(DIST_DIR, `.${requestedPath}`);
+  if (!filePath.startsWith(`${DIST_DIR}${path.sep}`)) {
     response.writeHead(403);
     return response.end();
   }

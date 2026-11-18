@@ -1,5 +1,6 @@
 node_modules/
 .netlify/
+dist/
 data/registros.json
 *.xlsx
 .env

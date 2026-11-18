@@ -1,6 +1,6 @@
 [build]
-  command = "npm ci"
-  publish = "public"
+  command = "npm ci --include=dev && npm run build && npm prune --omit=dev"
+  publish = "dist"
   functions = "netlify/functions"
 
 [functions]

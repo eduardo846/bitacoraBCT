@@ -4,7 +4,10 @@
   "private": true,
   "description": "Aplicación web de bitácora con registros guardados en Cloud Firestore",
   "scripts": {
-    "start": "node server.js"
+    "dev": "vite --host 127.0.0.1",
+    "api": "node server.js",
+    "build": "vite build",
+    "start": "npm run build && node server.js"
   },
   "dependencies": {
     "dotenv": "^18.0.10",
@@ -13,5 +16,11 @@
   },
   "overrides": {
     "uuid": "^11.1.1"
+  },
+  "devDependencies": {
+    "firebase": "^13.4.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "vite": "^6.4.6"
   }
 }
