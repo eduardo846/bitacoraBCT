@@ -399,6 +399,9 @@ async function initializeAuthentication() {
   }
   if (window.firebase.apps.length === 0) window.firebase.initializeApp(config);
   firebaseAuth = window.firebase.auth();
+  authEmail.disabled = false;
+  authPassword.disabled = false;
+  authSubmit.disabled = false;
   firebaseAuth.onAuthStateChanged((user) => {
     if (!user) {
       entries = [];
@@ -414,5 +417,4 @@ async function initializeAuthentication() {
 initializeAuthentication().catch((error) => {
   console.error("No se pudo iniciar Firebase Authentication:", error);
   showLogin(error.message || "No se pudo iniciar la autenticación.");
-  authForm.hidden = true;
 });
