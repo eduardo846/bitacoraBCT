@@ -128,6 +128,7 @@ function firebaseLoginMessage(error) {
 export default function App() {
   const [auth, setAuth] = useState(null);
   const [user, setUser] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
   const [authMessage, setAuthMessage] = useState("Cargando Firebase Authentication…");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -170,11 +171,14 @@ export default function App() {
         setUser(currentUser);
         setPassword("");
         setAuthMessage(currentUser ? "" : "Inicia sesión con tu correo y contraseña de Firebase.");
+        setAuthReady(true);
       }, (error) => {
         setAuthMessage(error.message || "No se pudo verificar la sesión.");
+        setAuthReady(true);
       });
     } catch (error) {
       setAuthMessage(error.message || "No se pudo iniciar Firebase Authentication.");
+      setAuthReady(true);
     }
     return () => unsubscribe?.();
   }, []);
@@ -421,7 +425,15 @@ export default function App() {
         </div>
       </header>
 
-      {!user ? (
+      {!authReady ? (
+        <section className="auth-panel" aria-live="polite">
+          <div className="auth-card" role="status">
+            <p className="eyebrow"><span className="eyebrow-dot" /> FIREBASE AUTHENTICATION</p>
+            <h1>Verificando sesión…</h1>
+            <p>Un momento, estamos comprobando si ya has iniciado sesión.</p>
+          </div>
+        </section>
+      ) : !user ? (
         <section className="auth-panel" aria-live="polite">
           <div className="auth-card">
             <p className="eyebrow"><span className="eyebrow-dot" /> FIREBASE AUTHENTICATION</p>
