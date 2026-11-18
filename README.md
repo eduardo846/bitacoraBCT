@@ -8,6 +8,8 @@ Los registros se guardan en la colección `registros` de Cloud Firestore. La tab
 
 La aplicación usa Firebase Authentication con correo y contraseña. El backend verifica los ID tokens con Firebase Admin y restringe el acceso a las direcciones incluidas en `FIREBASE_ALLOWED_EMAILS`.
 
+La interfaz se adapta a móviles, tabletas y escritorio. En pantallas estrechas, los filtros y formularios se reorganizan y la tabla conserva el desplazamiento horizontal. Al abrir o recargar la página, Firebase restaura primero la sesión para evitar mostrar brevemente el formulario de acceso a usuarios autenticados. El pie de página incluye la atribución «Desarrollado por Ing Héctor E Ramirez».
+
 ## Requisitos
 
 - Node.js 22 o posterior
@@ -61,8 +63,8 @@ Abre [http://localhost:3000](http://localhost:3000). Para desarrollo con recarga
 Netlify compila React/Vite y publica `dist/`; las rutas de la API se ejecutan mediante Netlify Functions, configuradas en `netlify.toml`.
 
 1. Importa el repositorio en Netlify y selecciona la rama que quieras desplegar.
-2. En Environment variables, define las variables `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` y `VITE_FIREBASE_AUTH_DOMAIN` (opcional) con alcance **Builds**. `VITE_FIREBASE_STORAGE_BUCKET` y `VITE_FIREBASE_MESSAGING_SENDER_ID` también son opcionales.
-3. Define `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` y `FIREBASE_ALLOWED_EMAILS` con alcance **Functions**. El proyecto también puede tener `FIREBASE_PROJECT_ID` disponible para Builds si se requiere, pero el cliente usa `VITE_FIREBASE_PROJECT_ID`.
+2. En Environment variables, define las variables `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` y `VITE_FIREBASE_AUTH_DOMAIN` (opcional) con alcance **Builds**. `VITE_FIREBASE_STORAGE_BUCKET` y `VITE_FIREBASE_MESSAGING_SENDER_ID` también son opcionales. Asegúrate de que estén disponibles para el contexto de despliegue correspondiente, por ejemplo, **Branch deploy** para la rama `development`.
+3. Define `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` y `FIREBASE_ALLOWED_EMAILS` con alcance **Functions**. `FIREBASE_PROJECT_ID` es la configuración del servidor; el cliente usa `VITE_FIREBASE_PROJECT_ID`.
 4. En Firebase Authentication, agrega el dominio de Netlify a los dominios autorizados. Crea las cuentas en Firebase Console y agrega sus correos a `FIREBASE_ALLOWED_EMAILS`.
 5. Despliega el sitio y accede por HTTPS. Si cambias variables de entorno, vuelve a desplegar para que el sitio y las funciones reciban los valores actualizados.
 
