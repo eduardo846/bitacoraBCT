@@ -1,0 +1,15 @@
+{
+  "name": "bitacora",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aplicación web de bitácora con registros guardados en JSON",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
+  }
+}
