@@ -650,6 +650,7 @@ export default function App() {
 
       <footer className="footer">
         <span>BITÁCORA · CONTROL DE ACTIVIDADES</span>
+        <span>Desarrollado por Ing Héctor E Ramirez</span>
         <span>Los registros se guardan en Cloud Firestore.</span>
       </footer>
 
