@@ -4,4 +4,6 @@ data/registros.json
 .env
 .env.*
 !.env.example
+serviceAccountKey.json
+*-firebase-adminsdk-*.json
 npm-debug.log*

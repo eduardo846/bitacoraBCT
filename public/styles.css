@@ -80,6 +80,7 @@ h1, h2, p { margin-top: 0; }
 .month-filter { height: 34px; padding: 0 8px; display: flex; align-items: center; gap: 7px; border: 1px solid #c7d2db; border-radius: 4px; background: #fff; }
 .month-filter span { color: #64737d; font-size: 9px; }
 .month-filter input { width: 105px; border: 0; outline: 0; color: #3e4d58; font-size: 10px; }
+.month-filter input[type="date"] { width: 125px; }
 .filters .button { min-height: 34px; padding: 0 10px; font-size: 9px; }
 
 .table-wrap { width: 100%; overflow: auto; }
@@ -165,6 +166,7 @@ h1, h2, p { margin-top: 0; }
   .search-box { width: 100%; flex: 1 1 100%; }
   .month-filter { flex: 1; justify-content: space-between; }
   .month-filter input { width: 115px; }
+  .month-filter input[type="date"] { width: 125px; }
   .filters .button-export { flex: 1; }
   .records-table { min-width: 1240px; }
   .footer { align-items: flex-start; flex-direction: column; gap: 6px; }

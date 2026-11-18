@@ -1,13 +1,15 @@
+require("dotenv").config();
+
 const http = require("node:http");
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const { randomUUID } = require("node:crypto");
 const ExcelJS = require("exceljs");
+const { cert, getApps, initializeApp } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
 
 const ROOT = __dirname;
 const PUBLIC_DIR = path.join(ROOT, "public");
-const DATA_DIR = path.join(ROOT, "data");
-const DATA_FILE = path.join(DATA_DIR, "registros.json");
 const PORT = Number(process.env.PORT) || 3000;
 const MAX_BODY_BYTES = 64 * 1024;
 const ACTIVITIES = new Set([
@@ -24,7 +26,7 @@ const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8"
 };
-let writeQueue = Promise.resolve();
+let recordsCollection;
 
 function sendJson(response, statusCode, body) {
   response.writeHead(statusCode, {
@@ -35,30 +37,37 @@ function sendJson(response, statusCode, body) {
   response.end(JSON.stringify(body));
 }
 
-function withWriteLock(operation) {
-  const result = writeQueue.then(operation);
-  writeQueue = result.catch(() => {});
-  return result;
+function initializeFirebase() {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  if (!projectId || !clientEmail || !privateKey) {
+    throw new Error("Completa FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL y FIREBASE_PRIVATE_KEY en .env.");
+  }
+  if (getApps().length === 0) {
+    initializeApp({
+      credential: cert({
+        projectId,
+        clientEmail,
+        privateKey: privateKey.replace(/\\n/g, "\n")
+      }),
+      projectId
+    });
+  }
+  return getFirestore().collection("registros");
 }
 
-async function readEntries() {
-  const contents = await fs.readFile(DATA_FILE, "utf8");
-  const entries = JSON.parse(contents);
-  if (!Array.isArray(entries)) {
-    throw new Error("El archivo de registros debe contener una lista.");
+async function readEntries(month) {
+  let query = recordsCollection;
+  if (month) {
+    const [year, monthNumber] = month.split("-").map(Number);
+    const nextMonth = monthNumber === 12
+      ? `${year + 1}-01-01`
+      : `${year}-${String(monthNumber + 1).padStart(2, "0")}-01`;
+    query = query.where("fecha", ">=", `${month}-01`).where("fecha", "<", nextMonth);
   }
-  return entries;
-}
-
-async function saveEntries(entries) {
-  const tempFile = path.join(DATA_DIR, `registros.${randomUUID()}.tmp`);
-  try {
-    await fs.writeFile(tempFile, `${JSON.stringify(entries, null, 2)}\n`, "utf8");
-    await fs.rename(tempFile, DATA_FILE);
-  } catch (error) {
-    await fs.rm(tempFile, { force: true });
-    throw error;
-  }
+  const snapshot = await query.get();
+  return snapshot.docs.map((document) => ({ ...document.data(), id: document.id }));
 }
 
 async function readJson(request) {
@@ -256,7 +265,7 @@ async function handleApi(request, response, url) {
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
       return sendJson(response, 400, { message: "Indica el mes de consulta en formato AAAA-MM." });
     }
-    const entries = (await readEntries()).filter((entry) => entry.fecha.startsWith(month));
+    const entries = await readEntries(month);
     if (entries.length === 0) {
       return sendJson(response, 404, { message: "No hay registros para el mes seleccionado." });
     }
@@ -280,14 +289,9 @@ async function handleApi(request, response, url) {
     const validated = validateEntry(body);
     if (validated.error) return sendJson(response, 400, { message: validated.error });
 
-    const created = await withWriteLock(async () => {
-      const entries = await readEntries();
-      const entry = { id: randomUUID(), ...validated.value, createdAt: new Date().toISOString() };
-      entries.unshift(entry);
-      await saveEntries(entries);
-      return entry;
-    });
-    return sendJson(response, 201, created);
+    const entry = { id: randomUUID(), ...validated.value, createdAt: new Date().toISOString() };
+    await recordsCollection.doc(entry.id).create(entry);
+    return sendJson(response, 201, entry);
   }
 
   const match = url.pathname.match(/^\/api\/registros\/([0-9a-f-]{36})$/i);
@@ -299,13 +303,17 @@ async function handleApi(request, response, url) {
     const validated = validateEntry(body);
     if (validated.error) return sendJson(response, 400, { message: validated.error });
 
-    const updated = await withWriteLock(async () => {
-      const entries = await readEntries();
-      const index = entries.findIndex((entry) => entry.id === id);
-      if (index === -1) return null;
-      entries[index] = { ...entries[index], ...validated.value, updatedAt: new Date().toISOString() };
-      await saveEntries(entries);
-      return entries[index];
+    const reference = recordsCollection.doc(id);
+    const updated = await getFirestore().runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(reference);
+      if (!snapshot.exists) return null;
+      const entry = {
+        ...snapshot.data(),
+        ...validated.value,
+        updatedAt: new Date().toISOString()
+      };
+      transaction.set(reference, entry);
+      return { ...entry, id: snapshot.id };
     });
     return updated
       ? sendJson(response, 200, updated)
@@ -313,11 +321,11 @@ async function handleApi(request, response, url) {
   }
 
   if (request.method === "DELETE") {
-    const deleted = await withWriteLock(async () => {
-      const entries = await readEntries();
-      const remaining = entries.filter((entry) => entry.id !== id);
-      if (remaining.length === entries.length) return false;
-      await saveEntries(remaining);
+    const reference = recordsCollection.doc(id);
+    const deleted = await getFirestore().runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(reference);
+      if (!snapshot.exists) return false;
+      transaction.delete(reference);
       return true;
     });
     return deleted
@@ -378,15 +386,7 @@ async function handleRequest(request, response) {
 }
 
 async function start() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  try {
-    await fs.access(DATA_FILE);
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error;
-    await fs.writeFile(DATA_FILE, "[]\n", { encoding: "utf8", flag: "wx" }).catch((writeError) => {
-      if (writeError.code !== "EEXIST") throw writeError;
-    });
-  }
+  recordsCollection = initializeFirebase();
 
   const server = http.createServer((request, response) => {
     handleRequest(request, response).catch((error) => {

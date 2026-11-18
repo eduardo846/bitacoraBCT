@@ -5,6 +5,7 @@ const recordsBody = document.querySelector("#records-body");
 const formMessage = document.querySelector("#form-message");
 const pageMessage = document.querySelector("#page-message");
 const searchInput = document.querySelector("#search");
+const dayFilter = document.querySelector("#day-filter");
 const monthFilter = document.querySelector("#month-filter");
 const saveButton = document.querySelector("#save-entry");
 const dialogTitle = document.querySelector("#dialog-title");
@@ -15,6 +16,7 @@ let messageTimer;
 
 const today = new Date();
 const localDate = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+dayFilter.value = localDate;
 document.querySelector("#today-label").textContent = new Intl.DateTimeFormat("es", {
   weekday: "long", day: "numeric", month: "long", year: "numeric"
 }).format(today);
@@ -50,8 +52,10 @@ function formatHours(value) {
 
 function getVisibleEntries() {
   const query = searchInput.value.trim().toLocaleLowerCase("es");
+  const day = dayFilter.value;
   const month = monthFilter.value;
   return entries
+    .filter((entry) => !day || entry.fecha === day)
     .filter((entry) => !month || entry.fecha.startsWith(month))
     .filter((entry) => !query || [
       entry.consultor,
@@ -106,9 +110,13 @@ function renderEntries() {
     const cell = document.createElement("td");
     cell.className = "empty-cell";
     cell.colSpan = 11;
+    const selectedDay = dayFilter.value;
+    const hasEntriesForDay = entries.some((entry) => entry.fecha === selectedDay);
     cell.textContent = entries.length === 0
       ? "Todavía no hay actividades. Usa «Registrar actividad» para agregar la primera."
-      : "No se encontraron registros con esos filtros.";
+      : selectedDay && !monthFilter.value && !hasEntriesForDay
+        ? `No hay registros para ${formatDate(selectedDay)}. Los de otras fechas siguen guardados; elige otro día o un mes para consultarlos.`
+        : "No se encontraron registros con esos filtros.";
     row.append(cell);
     recordsBody.append(row);
     return;
@@ -195,10 +203,18 @@ document.querySelector("#cancel-delete").addEventListener("click", () => {
 document.querySelector("#clear-filters").addEventListener("click", () => {
   searchInput.value = "";
   monthFilter.value = "";
+  dayFilter.value = localDate;
   renderEntries();
 });
 searchInput.addEventListener("input", renderEntries);
-monthFilter.addEventListener("change", renderEntries);
+dayFilter.addEventListener("change", () => {
+  if (dayFilter.value) monthFilter.value = "";
+  renderEntries();
+});
+monthFilter.addEventListener("change", () => {
+  if (monthFilter.value) dayFilter.value = "";
+  renderEntries();
+});
 
 exportButton.addEventListener("click", async () => {
   const month = monthFilter.value;

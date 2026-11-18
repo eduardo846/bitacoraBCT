@@ -66,9 +66,10 @@
           </div>
           <div class="filters">
             <label class="search-box"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Buscar consultor, cliente o proyecto" aria-label="Buscar registros"></label>
+            <label class="month-filter"><span>Día</span><input id="day-filter" type="date" aria-label="Filtrar por día"></label>
             <label class="month-filter"><span>Mes</span><input id="month-filter" type="month" aria-label="Filtrar por mes"></label>
             <button class="button button-export" id="export-month" type="button" disabled title="Selecciona un mes con registros para exportar">⇩ Exportar Excel</button>
-            <button class="button button-light" id="clear-filters" type="button">Limpiar</button>
+            <button class="button button-light" id="clear-filters" type="button" title="Volver a los registros de hoy">Hoy</button>
           </div>
         </div>
 
@@ -98,7 +99,7 @@
       </section>
     </main>
 
-    <footer class="footer"><span>BITÁCORA · CONTROL DE ACTIVIDADES</span><span>Los registros se guardan en un archivo JSON local.</span></footer>
+    <footer class="footer"><span>BITÁCORA · CONTROL DE ACTIVIDADES</span><span>Los registros se guardan en Cloud Firestore.</span></footer>
 
     <dialog class="entry-dialog" id="entry-dialog" aria-labelledby="dialog-title">
       <form class="entry-form" id="entry-form">
@@ -108,11 +109,11 @@
         </div>
         <input id="entry-id" name="id" type="hidden">
         <div class="form-grid">
-          <div class="field"><label for="consultor">Consultor</label><input id="consultor" name="consultor" maxlength="100" placeholder="Nombre del consultor" required></div>
+          <div class="field"><label for="consultor">Consultor</label><input id="consultor" name="consultor" value="Héctor E Ramirez" maxlength="100" placeholder="Nombre del consultor" required></div>
           <div class="field"><label for="fecha">Fecha</label><input id="fecha" name="fecha" type="date" required></div>
-          <div class="field"><label for="cliente">Cliente</label><input id="cliente" name="cliente" maxlength="100" placeholder="Nombre del cliente" required></div>
+          <div class="field"><label for="cliente">Cliente</label><select id="cliente" name="cliente" required><option value="BCT">BCT</option><option value="Novacomp">Novacomp</option></select></div>
           <div class="field"><label for="proyecto">Proyecto / Requerimiento</label><input id="proyecto" name="proyecto" maxlength="160" placeholder="Ej. KASH / MSN-3012" required></div>
-          <div class="field"><label for="pais">País</label><input id="pais" name="pais" maxlength="100" placeholder="País" required></div>
+          <div class="field"><label for="pais">País</label><input id="pais" name="pais" value="Costa Rica" maxlength="100" placeholder="País" required></div>
           <div class="field"><label for="actividad">Actividad</label>
             <select id="actividad" name="actividad" required>
               <option>Desarrollo</option><option>Reuniones</option><option>Almuerzo</option><option>Cita Médica</option><option>Vacaciones o Feriado</option><option>Soporte</option><option>Otro</option>
