@@ -27,6 +27,7 @@
         <p class="eyebrow"><span class="eyebrow-dot"></span> FIREBASE AUTHENTICATION</p>
         <h1>Bitácora de actividades</h1>
         <p>Inicia sesión con tu cuenta autorizada para consultar y administrar los registros.</p>
+        <p class="form-message auth-message is-error" id="auth-message" role="status" aria-live="polite"></p>
         <form class="auth-form" id="auth-form">
           <div class="field">
             <label for="auth-email">Correo electrónico</label>
@@ -36,7 +37,6 @@
             <label for="auth-password">Contraseña</label>
             <input id="auth-password" name="password" type="password" autocomplete="current-password" required>
           </div>
-          <p class="form-message" id="auth-message" role="status" aria-live="polite"></p>
           <button class="button button-primary" id="auth-submit" type="submit">Iniciar sesión</button>
         </form>
       </div>
