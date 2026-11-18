@@ -7,6 +7,7 @@
     <meta name="description" content="Registra y consulta tus actividades y horas de trabajo.">
     <title>Bitácora de actividades y horas</title>
     <link rel="stylesheet" href="/styles.css">
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js" defer></script>
     <script src="/app.js" defer></script>
   </head>
   <body>
@@ -14,11 +15,23 @@
       <a class="brand" href="/" aria-label="Bitácora, inicio"><span class="brand-icon" aria-hidden="true">B</span><span>BITÁCORA<small>CONTROL DE ACTIVIDADES</small></span></a>
       <div class="topbar-right">
         <span class="today" id="today-label"></span>
+        <span class="identity-email" id="identity-email" hidden></span>
+        <button class="button button-light" id="login-button" type="button" hidden>Iniciar sesión</button>
+        <button class="button button-light" id="logout-button" type="button" hidden>Cerrar sesión</button>
         <button class="button button-primary" id="new-entry" type="button"><span aria-hidden="true">＋</span> Registrar actividad</button>
       </div>
     </header>
 
-    <main class="page">
+    <section class="auth-panel" id="auth-panel" aria-live="polite" hidden>
+      <div class="auth-card">
+        <p class="eyebrow"><span class="eyebrow-dot"></span> ACCESO PROTEGIDO</p>
+        <h1>Bitácora de actividades</h1>
+        <p id="auth-message">Inicia sesión con la cuenta que te invitó el administrador para consultar y administrar los registros.</p>
+        <button class="button button-primary" id="auth-login" type="button">Iniciar sesión</button>
+      </div>
+    </section>
+
+    <main class="page" id="app-content" hidden>
       <section class="page-heading">
         <div>
           <p class="eyebrow"><span class="eyebrow-dot"></span> REGISTRO DE TIEMPO</p>

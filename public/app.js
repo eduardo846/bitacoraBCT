@@ -10,6 +10,14 @@ const monthFilter = document.querySelector("#month-filter");
 const saveButton = document.querySelector("#save-entry");
 const dialogTitle = document.querySelector("#dialog-title");
 const exportButton = document.querySelector("#export-month");
+const authPanel = document.querySelector("#auth-panel");
+const authMessage = document.querySelector("#auth-message");
+const appContent = document.querySelector("#app-content");
+const loginButton = document.querySelector("#login-button");
+const logoutButton = document.querySelector("#logout-button");
+const identityEmail = document.querySelector("#identity-email");
+const localDevelopment = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+  && !new URLSearchParams(window.location.search).has("identity");
 let entries = [];
 let pendingDeleteId = null;
 let messageTimer;
@@ -32,7 +40,15 @@ function showPageMessage(message, isError = false) {
 }
 
 async function request(path, options = {}) {
-  const response = await fetch(path, options);
+  const headers = new Headers(options.headers || {});
+  if (!localDevelopment) {
+    const identity = window.netlifyIdentity;
+    if (!identity || !identity.currentUser()) {
+      throw new Error("Inicia sesión para continuar.");
+    }
+    headers.set("Authorization", `Bearer ${await identity.refresh()}`);
+  }
+  const response = await fetch(path, { ...options, headers });
   const result = await response.json();
   if (!response.ok) throw new Error(result.message || "No se pudo completar la solicitud.");
   return result;
@@ -221,7 +237,11 @@ exportButton.addEventListener("click", async () => {
   if (!month || exportButton.disabled) return;
   exportButton.disabled = true;
   try {
-    const response = await fetch(`/api/registros/exportar?mes=${encodeURIComponent(month)}`);
+    const headers = new Headers();
+    if (!localDevelopment) {
+      headers.set("Authorization", `Bearer ${await window.netlifyIdentity.refresh()}`);
+    }
+    const response = await fetch(`/api/registros/exportar?mes=${encodeURIComponent(month)}`, { headers });
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || "No se pudo exportar el archivo.");
@@ -297,7 +317,7 @@ async function loadEntries() {
   renderEntries();
 }
 
-loadEntries().catch((error) => {
+function showLoadError(error) {
   console.error(error);
   recordsBody.replaceChildren();
   const row = document.createElement("tr");
@@ -305,4 +325,71 @@ loadEntries().catch((error) => {
   cell.colSpan = 11;
   row.append(cell);
   recordsBody.append(row);
+}
+
+function showAuthenticatedApp(user) {
+  identityEmail.textContent = user.email || "";
+  identityEmail.hidden = !user.email;
+  loginButton.hidden = true;
+  logoutButton.hidden = false;
+  authPanel.hidden = true;
+  appContent.hidden = false;
+  loadEntries().catch(showLoadError);
+}
+
+function showLogin(message) {
+  identityEmail.hidden = true;
+  logoutButton.hidden = true;
+  loginButton.hidden = false;
+  appContent.hidden = true;
+  authPanel.hidden = false;
+  authMessage.textContent = message;
+  recordsBody.replaceChildren();
+}
+
+document.querySelector("#auth-login").addEventListener("click", () => {
+  if (window.netlifyIdentity) window.netlifyIdentity.open("login");
 });
+loginButton.addEventListener("click", () => window.netlifyIdentity?.open("login"));
+logoutButton.addEventListener("click", async () => {
+  logoutButton.disabled = true;
+  try {
+    await window.netlifyIdentity.logout();
+  } catch (error) {
+    showPageMessage(error.message || "No se pudo cerrar la sesión.", true);
+  } finally {
+    logoutButton.disabled = false;
+  }
+});
+
+if (localDevelopment) {
+  appContent.hidden = false;
+  authPanel.hidden = true;
+  loginButton.hidden = true;
+  logoutButton.hidden = true;
+  loadEntries().catch(showLoadError);
+} else if (!window.netlifyIdentity) {
+  showLogin("No se pudo cargar el inicio de sesión. Verifica tu conexión y vuelve a cargar la página.");
+  loginButton.disabled = true;
+} else {
+  window.netlifyIdentity.setLocale("es");
+  window.netlifyIdentity.on("init", (user) => {
+    if (!user) {
+      showLogin("Inicia sesión con la cuenta que te invitó el administrador para consultar y administrar los registros.");
+      return;
+    }
+    showAuthenticatedApp(user);
+  });
+  window.netlifyIdentity.on("login", (user) => {
+    window.netlifyIdentity.close();
+    showAuthenticatedApp(user);
+  });
+  window.netlifyIdentity.on("logout", () => {
+    entries = [];
+    showLogin("La sesión se cerró. Inicia sesión para volver a acceder a la bitácora.");
+  });
+  window.netlifyIdentity.on("error", (error) => {
+    showLogin(error.message || "No se pudo completar la autenticación. Inténtalo de nuevo.");
+  });
+  window.netlifyIdentity.init();
+}
