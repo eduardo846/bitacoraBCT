@@ -4,7 +4,7 @@ Interfaz en React, compilada con Vite, y API protegida con Netlify Functions y F
 
 Aplicación web para registrar jornadas por consultor, fecha, cliente, proyecto o requerimiento, país, actividad, descripción y horas de inicio y fin. El tiempo trabajado se calcula automáticamente; si la hora final es anterior a la inicial, se toma como una jornada que cruza la medianoche. La interfaz incluye un recordatorio de periodicidad, correo de envío, jornada según el cliente y uso de una plantilla por periodo.
 
-Los registros se guardan en la colección `registros` de Cloud Firestore. La tabla muestra por defecto los registros del día actual y permite consultar otros días o meses sin borrar registros anteriores, además de buscar, editar y eliminar actividades. Al elegir un mes con registros, se habilita **Exportar Excel** para descargar la consulta mensual como `.xlsx`, con encabezados azules, filas coloreadas por actividad y formatos de fecha y hora.
+Los registros se guardan en `registros/{id}` en Cloud Firestore. Cada actividad conserva los nombres legibles y contiene referencias `consultorId`, `clienteId` y `proyectoId` a las colecciones `consultores`, `clientes` y `proyectos`. Los proyectos se identifican en el ámbito de su cliente, por lo que un mismo nombre puede usarse con distintos clientes. Las referencias usan IDs deterministas derivados de nombres normalizados; son hashes seudónimos, no una medida de anonimización. La tabla muestra por defecto los registros del día actual y permite consultar otros días o meses, buscar, editar y eliminar actividades. Al elegir un mes con registros, se habilita **Exportar Excel** para descargar la consulta mensual como `.xlsx`.
 
 La aplicación usa Firebase Authentication con correo y contraseña. El backend verifica los ID tokens con Firebase Admin y restringe el acceso a las direcciones incluidas en `FIREBASE_ALLOWED_EMAILS`.
 
@@ -57,6 +57,22 @@ npm start
 ```
 
 Abre [http://localhost:3000](http://localhost:3000). Para desarrollo con recarga en caliente, ejecuta `npm run api` en una terminal y `npm run dev` en otra; Vite abrirá [http://localhost:5173](http://localhost:5173) y enviará las solicitudes `/api` al servidor local.
+
+### Migrar los registros existentes a referencias
+
+Los registros que ya están en `registros` siguen siendo compatibles y no se cambian automáticamente al desplegar. La migración agrega los campos de referencia y crea los documentos relacionados sin eliminar ni cambiar los campos actuales. Configura primero las credenciales de Firebase Admin en `.env`; el comando inicial solo simula y muestra cantidades, sin escribir datos:
+
+```powershell
+npm run migrate:references
+```
+
+Revisa el resultado y ejecuta la migración explícita para guardar los cambios:
+
+```powershell
+npm run migrate:references -- --apply
+```
+
+La migración se puede repetir si se interrumpe: procesa registros por páginas y conserva intactos los campos existentes. No la ejecutes simultáneamente con otros procesos de importación masiva.
 
 ## Desplegar en Netlify
 

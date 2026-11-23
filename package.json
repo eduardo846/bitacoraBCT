@@ -7,6 +7,8 @@
     "dev": "vite --host 127.0.0.1",
     "api": "node server.js",
     "build": "vite build",
+    "migrate:references": "node scripts/migrate-record-references.js",
+    "test": "node --test",
     "start": "npm run build && node server.js"
   },
   "dependencies": {
