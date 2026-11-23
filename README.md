@@ -8,6 +8,25 @@ Los registros se guardan en `registros/{id}` en Cloud Firestore. Cada actividad 
 
 La aplicación usa Firebase Authentication con correo y contraseña. El backend verifica los ID tokens con Firebase Admin y restringe el acceso a las direcciones incluidas en `FIREBASE_ALLOWED_EMAILS`.
 
+## Diagrama de funcionamiento
+
+```mermaid
+flowchart TD
+    U[Usuario] --> UI[Interfaz React y Vite]
+    UI -->|Correo y contraseña| Auth[Firebase Authentication]
+    Auth -->|ID token| UI
+    UI -->|Solicitud API con token Bearer| NF[Netlify Function]
+    NF --> Verify[Firebase Admin verifica el token]
+    Verify --> Allowed{Correo incluido en FIREBASE_ALLOWED_EMAILS}
+    Allowed -->|No| Denied[Respuesta 401 o 403]
+    Allowed -->|Sí| API[Procesamiento de la solicitud]
+    API -->|Crear, listar, editar o eliminar| Records[(Firestore: registros)]
+    Records --> Refs[(Firestore: consultores, clientes y proyectos)]
+    API -->|Exportar mes| Excel[ExcelJS genera archivo .xlsx]
+    Excel --> UI
+    API --> UI
+```
+
 La interfaz se adapta a móviles, tabletas y escritorio. En pantallas estrechas, los filtros y formularios se reorganizan y la tabla conserva el desplazamiento horizontal. Al abrir o recargar la página, Firebase restaura primero la sesión para evitar mostrar brevemente el formulario de acceso a usuarios autenticados. El pie de página incluye la atribución «Desarrollado por Ing Héctor E Ramirez».
 
 ## Requisitos
