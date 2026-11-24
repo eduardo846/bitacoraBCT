@@ -29,6 +29,8 @@ const ACTIVITIES = [
   "Otro"
 ];
 
+const PAGE_SIZE = 12;
+
 function localDate() {
   const now = new Date();
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000)
@@ -148,6 +150,7 @@ export default function App() {
   const [savingRecord, setSavingRecord] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
   const [deletingRecord, setDeletingRecord] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const entryDialog = useRef(null);
   const deleteDialog = useRef(null);
   const messageTimer = useRef(null);
@@ -242,6 +245,22 @@ export default function App() {
       ].some((value) => String(value || "").toLocaleLowerCase("es").includes(query)))
       .sort((a, b) => b.fecha.localeCompare(a.fecha) || a.horaInicio.localeCompare(b.horaInicio));
   }, [dayFilter, entries, monthFilter, search]);
+
+  const totalPages = Math.max(1, Math.ceil(visibleEntries.length / PAGE_SIZE));
+  const paginatedEntries = visibleEntries.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+  const firstVisibleRow = visibleEntries.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const lastVisibleRow = Math.min(currentPage * PAGE_SIZE, visibleEntries.length);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, dayFilter, monthFilter]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
 
   const totalHours = visibleEntries.reduce((total, entry) => total + (Number(entry.tiempo) || 0), 0);
   const clients = new Set(visibleEntries.map((entry) => String(entry.cliente || "").toLocaleLowerCase("es")));
@@ -604,9 +623,9 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleEntries.length === 0 ? (
+                  {paginatedEntries.length === 0 ? (
                     <tr><td className="empty-cell" colSpan={11}>{emptyMessage}</td></tr>
-                  ) : visibleEntries.map((entry) => (
+                  ) : paginatedEntries.map((entry) => (
                     <tr className={activityClass(entry.actividad)} key={entry.id}>
                       <td>{entry.consultor}</td>
                       <td>{formatDate(entry.fecha)}</td>
@@ -643,6 +662,29 @@ export default function App() {
                 </tbody>
               </table>
             </div>
+            {visibleEntries.length > PAGE_SIZE && (
+              <nav className="pagination" aria-label="Paginación de registros">
+                <button
+                  className="pagination-button"
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                >
+                  ← Anterior
+                </button>
+                <span className="pagination-status">
+                  {firstVisibleRow}-{lastVisibleRow} de {visibleEntries.length} · Página {currentPage} de {totalPages}
+                </span>
+                <button
+                  className="pagination-button"
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                >
+                  Siguiente →
+                </button>
+              </nav>
+            )}
             <p className="table-note">El tiempo se calcula automáticamente según las horas de inicio y fin.</p>
           </section>
         </main>
